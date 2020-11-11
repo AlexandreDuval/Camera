@@ -47,7 +47,7 @@ class CameraUSB():
                 self.camName = camName
                 self.cap = cv2.VideoCapture(numCam)
                 self.fourcc = cv2.VideoWriter_fourcc(*'XVID')
-                self.out = cv2.VideoWriter('{0}.avi', self.fourcc, self.fps, self.resolution)
+                self.out = cv2.VideoWriter(self.camName+'.avi', self.fourcc, self.fps, self.resolution)
 
 
 
@@ -61,50 +61,59 @@ cams = [cam1]
 # ------------------------------------------------------
 # Fonctions
 # ------------------------------------------------------
-def convert_video(camList, remove=True):
+def convert_video(camList, remove=True, extension):
         '''
         
         '''
         t = time.localtime()
         timestamp = time.strftime('%d-%b-%Y_%H:%M:%S', t)
-        print(timestamp)
-        command = "MP4Box -add output.avi output_" + timestamp + ".mp4"
-        call([command], shell=True)
-        print("Converte to MP4")
-        
-        if remove:
-                os.remove("output.avi")
-                print(".avi removed")
+        for cam in camList:
+                command = "MP4Box -add {0}.avi {0}_{1}.{2}".format(cam.camName, timestamp, extension)
+                call([command], shell=True)
+                if remove:
+                        os.remove("{0}.avi".format(cam.camName))
 
 def start_recording(camList):
         '''
 
         '''
-        ret, frame = cap.read()
-        out.write(frame)
+        for cam in camList:
+                ret, frame = cam.cap.read()
+                cam.out.write(frame)
 
 def close(camList):
         '''
-        '''
-        cap.release()
-        out.release()
-        cv2.destroyAllWindows()
-        print("closed")
 
+        '''
+        for cam in camList:
+                cam.cap.release()
+                cam.out.release()
 
 # ------------------------------------------------------
 # Fonction principale
 # ------------------------------------------------------
 def main():
-        os.chdir("/home/pi/Documents/RockETS/VideosCaptured")
-        while True:
-                start_recording(cams)
-                msg = input()
-                if msg == "close":
-                        convert_video(cams)
-                        break
+        try:
+                os.chdir("/home/pi/Documents/RockETS/VideosCaptured")
+                while True:
+                        start_recording(cams)
+                        msg = input()
+                        if msg == "stop":
+                                convert_video(cams)
+                                break
+                        else:
+                                print(''stop' pour arreter')
 
-        close(cams)
+                close(cams)
+
+        except KeyboardInterrupt:
+                #Ctrl-c reçu
+                print("Programme interrompu par Ctrl-c")
+        except OSError as e:
+                print("Une erreur est survenu : ", e)
+        except CoordException as ce:
+                print("Problème détecté dans l'utilisation des fonctions.")
+                print(F"Message d'erreur: {ce}")
 
 # ------------------------------------------------------
 # Programme principal
